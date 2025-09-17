@@ -1,0 +1,291 @@
+
+<!doctype html><html><head></head><body><!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Real-Time Chat</title>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			display: flex;
+			height: 100vh;
+			background-color: #36393f;
+			color: #dcddde;
+		}
+
+		.container {
+			display: flex;
+			flex: 1;
+		}
+
+		/* Sidebar */
+		.sidebar {
+			width: 80px;
+			background-color: #2f3136;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			padding-top: 20px;
+			border-right: 1px solid #424549;
+		}
+
+		.sidebar .avatar {
+			width: 40px;
+			height: 40px;
+			border-radius: 50%;
+			background-color: #7289da;
+			margin-bottom: 20px;
+		}
+
+		.sidebar .user-status {
+			width: 12px;
+			height: 12px;
+			border-radius: 50%;
+			background-color: #3ba55c;
+			margin-top: -12px;
+			margin-left: 28px;
+		}
+
+		/* Chat Section */
+		.chat-container {
+			display: flex;
+			flex-direction: column;
+			flex: 1;
+			max-width: 800px;
+			margin-left: 20px;
+			background-color: #2f3136;
+			border-radius: 8px;
+			box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+			overflow: hidden;
+			display: none;
+			/* Initially hidden */
+		}
+
+		.chat-header {
+			background-color: #202225;
+			padding: 10px;
+			text-align: center;
+			font-size: 18px;
+			font-weight: bold;
+		}
+
+		.chat-box {
+			padding: 20px;
+			flex: 1;
+			overflow-y: auto;
+			margin-bottom: 10px;
+		}
+
+		.message {
+			display: flex;
+			margin-bottom: 15px;
+		}
+
+		.message .avatar {
+			width: 32px;
+			height: 32px;
+			border-radius: 50%;
+			margin-right: 12px;
+		}
+
+		.message .content {
+			background-color: #40444b;
+			border-radius: 6px;
+			padding: 10px;
+			max-width: 75%;
+			color: #dcddde;
+		}
+
+		.message .content .user {
+			font-weight: bold;
+			color: #7289da;
+		}
+
+		.message .content .text {
+			margin-top: 5px;
+		}
+
+		.message .content .timestamp {
+			font-size: 12px;
+			color: #72767d;
+			margin-top: 5px;
+		}
+
+		/* Input Area */
+		.input-area {
+			display: flex;
+			padding: 10px;
+			background-color: #202225;
+			border-top: 1px solid #424549;
+		}
+
+		.input-area input {
+			flex: 1;
+			padding: 10px;
+			border-radius: 4px;
+			background-color: #40444b;
+			color: #dcddde;
+			border: 1px solid #484d53;
+			margin-right: 10px;
+		}
+
+		.input-area button {
+			padding: 10px;
+			background-color: #7289da;
+			color: white;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+		}
+
+		.input-area button:hover {
+			background-color: #5b6eae;
+		}
+
+		/* Name Prompt */
+		.name-prompt {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			background-color: rgba(0, 0, 0, 0.8);
+			padding: 20px;
+			border-radius: 8px;
+			color: #fff;
+			text-align: center;
+		}
+
+		.name-prompt input {
+			padding: 10px;
+			font-size: 16px;
+			border-radius: 4px;
+			border: none;
+			margin-top: 10px;
+		}
+
+		.name-prompt button {
+			margin-top: 10px;
+			padding: 10px 20px;
+			background-color: #7289da;
+			color: white;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+		}
+
+		.name-prompt button:hover {
+			background-color: #5b6eae;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="container">
+		<!-- Sidebar -->
+		<div class="sidebar">
+			<div class="avatar"></div>
+			<div class="user-status"></div>
+		</div>
+
+		<!-- Chat Section -->
+		<div id="chat-container" class="chat-container">
+			<div class="chat-header">General Chat</div>
+			<div id="chat-box" class="chat-box"></div>
+			<div class="input-area">
+				<input id="message-input" type="text" placeholder="Type a message..." />
+				<button id="send-button">Send</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Name Prompt -->
+	<div id="name-prompt" class="name-prompt">
+		<h2>Enter Your Name</h2>
+		<input type="text" id="user-name" placeholder="Your name..." />
+		<button id="submit-name">Join Chat</button>
+	</div>
+
+	<script>
+		const chatBox = document.getElementById('chat-box');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const namePrompt = document.getElementById('name-prompt');
+    const userNameInput = document.getElementById('user-name');
+    const submitNameButton = document.getElementById('submit-name');
+    const chatContainer = document.getElementById('chat-container');
+
+    let userName = '';
+
+    // Mock WebSocket for testing purposes (simulate messages)
+    const ws = {
+      onopen: () => console.log("WebSocket connected"),
+      onmessage: (event) => {
+        const messageData = JSON.parse(event.data);
+        const messageElement = document.createElement('div');
+        messageElement.classList.add('message');
+        messageElement.innerHTML = `
+          <div class="avatar" style="background-color: ${messageData.avatarColor || '#7289da'};"></div>
+          <div class="content">
+            <span class="user">${messageData.user}</span>
+            <div class="text">${messageData.message}</div>
+            <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+          </div>
+        `;
+        chatBox.appendChild(messageElement);
+        chatBox.scrollTop = chatBox.scrollHeight;
+      },
+      send: (message) => {
+        console.log('Sending message:', message);
+        // Simulate receiving the same message back from server
+        setTimeout(() => ws.onmessage({ data: JSON.stringify(message) }), 1000);
+      },
+      close: () => console.log("WebSocket disconnected")
+    };
+
+    // Mock WebSocket open connection
+    ws.onopen();
+
+    // Send message when button is clicked
+    sendButton.addEventListener('click', () => {
+      const message = messageInput.value.trim();
+      if (message && userName) {
+        const messageData = {
+          user: userName,  // Use the user-selected name
+          message: message,
+          avatarColor: '#7289da' // You can add a dynamic avatar color
+        };
+        ws.send(messageData);  // Send the message
+        messageInput.value = ''; // Clear the input field
+      }
+    });
+
+    // Handle the 'Enter' key for sending messages
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendButton.click();
+      }
+    });
+
+    // Handle the name submission
+    submitNameButton.addEventListener('click', () => {
+      const name = userNameInput.value.trim();
+      if (name) {
+        userName = name;  // Store the name
+        namePrompt.style.display = 'none';  // Hide the name prompt
+        chatContainer.style.display = 'flex';  // Show the chat container
+      } else {
+        alert('Please enter a valid name');
+      }
+    });
+	</script>
+</body>
+
+</html></body><html>
